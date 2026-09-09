@@ -1,0 +1,6 @@
+{
+  "name": "3D Arena Fighters",
+  "description": "Jogo de batalha 3D multiplayer, treino solo e modo Battle Royale por fases com Three.js, inteligência artificial com ataque alternado e bots flanqueadores lentos, progressão com selos e escalonamento de dificuldade.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

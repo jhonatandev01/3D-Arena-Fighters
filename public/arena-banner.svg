@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="100%" height="100%">
+  <defs>
+    <radialGradient id="skyGlow" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="40%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+
+    <radialGradient id="stadiumCenter" cx="50%" cy="65%" r="45%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.45" />
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="beamCyan" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#0891b2" stop-opacity="0" />
+    </linearGradient>
+
+    <linearGradient id="beamPurple" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0" />
+    </linearGradient>
+
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#ec4899" />
+    </linearGradient>
+
+    <linearGradient id="gridGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.3" />
+      <stop offset="80%" stop-color="#0f172a" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+    </linearGradient>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Sky & Deep Arena Backdrop -->
+  <rect width="1280" height="720" fill="url(#skyGlow)" />
+
+  <!-- Stadium Volumetric Spotlight Beams -->
+  <polygon points="120,0 260,0 480,560 300,560" fill="url(#beamCyan)" opacity="0.35" />
+  <polygon points="1160,0 1020,0 800,560 980,560" fill="url(#beamPurple)" opacity="0.35" />
+  <polygon points="640,0 600,0 520,540 760,540" fill="url(#beamCyan)" opacity="0.2" />
+
+  <!-- Distant Cyber City Skyline Silhouettes -->
+  <g fill="#0b0f19" opacity="0.7">
+    <rect x="80" y="240" width="60" height="220" />
+    <rect x="150" y="210" width="80" height="250" />
+    <polygon points="190,160 210,210 170,210" />
+    <rect x="250" y="280" width="50" height="180" />
+    <rect x="960" y="220" width="70" height="240" />
+    <polygon points="995,170 1015,220 975,220" />
+    <rect x="1050" y="260" width="60" height="200" />
+    <rect x="1130" y="230" width="80" height="230" />
+  </g>
+
+  <!-- Stadium Radial Light Dome -->
+  <circle cx="640" cy="500" r="480" fill="url(#stadiumCenter)" />
+
+  <!-- Perspective 3D Arena Ground Grid -->
+  <path d="M0,520 L1280,520 L1280,720 L0,720 Z" fill="url(#gridGrad)" />
+  <!-- Grid Lines radiating from horizon -->
+  <g stroke="#0284c7" stroke-width="1.5" opacity="0.35">
+    <line x1="640" y1="520" x2="0" y2="700" />
+    <line x1="640" y1="520" x2="160" y2="720" />
+    <line x1="640" y1="520" x2="360" y2="720" />
+    <line x1="640" y1="520" x2="520" y2="720" />
+    <line x1="640" y1="520" x2="640" y2="720" />
+    <line x1="640" y1="520" x2="760" y2="720" />
+    <line x1="640" y1="520" x2="920" y2="720" />
+    <line x1="640" y1="520" x2="1120" y2="720" />
+    <line x1="640" y1="520" x2="1280" y2="700" />
+    <!-- Horizontal depth lines -->
+    <line x1="200" y1="540" x2="1080" y2="540" opacity="0.2" />
+    <line x1="120" y1="570" x2="1160" y2="570" opacity="0.4" />
+    <line x1="60" y1="615" x2="1220" y2="615" opacity="0.6" />
+    <line x1="0" y1="675" x2="1280" y2="675" opacity="0.8" />
+  </g>
+
+  <!-- Glowing 3D Arena Circular Platform -->
+  <ellipse cx="640" cy="560" rx="440" ry="85" fill="none" stroke="url(#ringGrad)" stroke-width="6" filter="url(#glow)" />
+  <ellipse cx="640" cy="560" rx="360" ry="70" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="14 10 24 8" opacity="0.85" />
+  <ellipse cx="640" cy="560" rx="260" ry="50" fill="none" stroke="#ec4899" stroke-width="2.5" opacity="0.6" />
+
+  <!-- Floating Holographic Hex Arena Energy Core -->
+  <ellipse cx="640" cy="560" rx="120" ry="24" fill="#06b6d4" opacity="0.25" filter="url(#glow)" />
+
+  <!-- Floating Cyber Crystals / Energy Orbs -->
+  <g filter="url(#glow)">
+    <!-- Left Crystal -->
+    <polygon points="320,440 336,468 320,496 304,468" fill="#38bdf8" opacity="0.9" />
+    <polygon points="320,440 330,468 320,496 310,468" fill="#ffffff" opacity="0.6" />
+    <ellipse cx="320" cy="530" rx="16" ry="4" fill="#38bdf8" opacity="0.3" />
+
+    <!-- Right Crystal -->
+    <polygon points="960,440 976,468 960,496 944,468" fill="#ec4899" opacity="0.9" />
+    <polygon points="960,440 970,468 960,496 950,468" fill="#ffffff" opacity="0.6" />
+    <ellipse cx="960" cy="530" rx="16" ry="4" fill="#ec4899" opacity="0.3" />
+  </g>
+
+  <!-- Ambient Light Sparks / Cyber Particle Motes -->
+  <g fill="#ffffff" opacity="0.75">
+    <circle cx="280" cy="380" r="2" />
+    <circle cx="340" cy="320" r="1.5" />
+    <circle cx="420" cy="410" r="2.5" />
+    <circle cx="500" cy="350" r="1.5" />
+    <circle cx="610" cy="390" r="2" />
+    <circle cx="680" cy="340" r="1.5" />
+    <circle cx="790" cy="420" r="2.5" />
+    <circle cx="890" cy="360" r="2" />
+    <circle cx="980" cy="390" r="1.5" />
+    <circle cx="1040" cy="330" r="2.5" />
+  </g>
+</svg>

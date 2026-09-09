@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background & Shield Gradients -->
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0.8" />
+    </linearGradient>
+
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+
+    <linearGradient id="bladeCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="25%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+
+    <linearGradient id="bladeGold" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="25%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+
+    <linearGradient id="coreNeon" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="50%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+
+    <!-- Glow Filters -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="coreGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer Cyber Ring with Tech Notches -->
+  <circle cx="256" cy="256" r="236" fill="none" stroke="url(#borderGrad)" stroke-width="6" stroke-dasharray="16 12 32 8" opacity="0.85" />
+  <circle cx="256" cy="256" r="218" fill="none" stroke="#06b6d4" stroke-width="2" opacity="0.4" />
+
+  <!-- Outer Shield Crest -->
+  <polygon points="256,42 426,118 392,342 256,464 120,342 86,118" fill="url(#shieldGrad)" stroke="url(#borderGrad)" stroke-width="8" filter="url(#neonGlow)" />
+  <polygon points="256,66 398,132 368,324 256,432 144,324 114,132" fill="#090d16" opacity="0.75" stroke="#38bdf8" stroke-width="2" stroke-dasharray="8 6" />
+
+  <!-- Crossed Cyber Blades (Backdrop of Core) -->
+  <!-- Left Blade (Cyan Plasma) -->
+  <g filter="url(#neonGlow)">
+    <path d="M120,410 L256,236 L276,256 L150,430 Z" fill="url(#bladeCyan)" />
+    <path d="M256,236 L396,82 L422,108 L276,256 Z" fill="url(#bladeCyan)" />
+    <!-- Blade Edge Glow Core -->
+    <line x1="126" y1="416" x2="416" y2="90" stroke="#ffffff" stroke-width="3" />
+    <!-- Crossguard & Hilt -->
+    <rect x="156" y="360" width="34" height="12" rx="4" transform="rotate(45 173 366)" fill="#38bdf8" stroke="#ffffff" stroke-width="2" />
+    <circle cx="130" cy="420" r="10" fill="#0284c7" stroke="#ffffff" stroke-width="2" />
+  </g>
+
+  <!-- Right Blade (Gold/Amber Plasma) -->
+  <g filter="url(#neonGlow)">
+    <path d="M392,410 L256,236 L236,256 L362,430 Z" fill="url(#bladeGold)" />
+    <path d="M256,236 L116,82 L90,108 L236,256 Z" fill="url(#bladeGold)" />
+    <!-- Blade Edge Glow Core -->
+    <line x1="386" y1="416" x2="96" y2="90" stroke="#ffffff" stroke-width="3" />
+    <!-- Crossguard & Hilt -->
+    <rect x="322" y="360" width="34" height="12" rx="4" transform="rotate(-45 339 366)" fill="#f59e0b" stroke="#ffffff" stroke-width="2" />
+    <circle cx="382" cy="420" r="10" fill="#d97706" stroke="#ffffff" stroke-width="2" />
+  </g>
+
+  <!-- Central Futuristic Hex Emblem & Arena Star -->
+  <g filter="url(#coreGlow)">
+    <!-- Hexagon Frame -->
+    <polygon points="256,182 320,218 320,294 256,330 192,294 192,218" fill="#0f172a" stroke="url(#coreNeon)" stroke-width="6" />
+    <!-- Inner Hex Accent -->
+    <polygon points="256,200 304,228 304,284 256,312 208,284 208,228" fill="#0284c7" opacity="0.35" />
+
+    <!-- 3D Combat Wings / Chevron Symbol -->
+    <path d="M256,212 L288,244 L256,276 L224,244 Z" fill="#ffffff" />
+    <path d="M256,280 L292,308 L256,322 L220,308 Z" fill="#38bdf8" />
+    <circle cx="256" cy="256" r="10" fill="#fbbf24" stroke="#ffffff" stroke-width="2" />
+  </g>
+
+  <!-- Cyber Tech Lines & Accent Notches -->
+  <line x1="256" y1="66" x2="256" y2="132" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+  <line x1="256" y1="360" x2="256" y2="426" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
+  <circle cx="256" cy="144" r="5" fill="#38bdf8" />
+  <circle cx="256" cy="348" r="5" fill="#f59e0b" />
+
+  <!-- Top Crown Accent -->
+  <polygon points="256,54 274,86 256,80 238,86" fill="#fbbf24" />
+</svg>
