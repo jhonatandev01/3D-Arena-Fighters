@@ -108,7 +108,7 @@ export class BattleArenaStage {
   // Callbacks
   public onStateUpdate?: (pos: [number, number, number], rot: number, action: PlayerAction, isBlocking: boolean) => void;
   public onAttackTriggered?: (type: 'light' | 'special', origin: [number, number, number], direction: [number, number, number]) => void;
-  public onHitTarget?: (targetId: string, damage: number, type: string) => void;
+  public onHitTarget?: (targetId: string, damage: number, type: string, attackerId?: string) => void;
 
   // Movement audio feedback timers
   private footstepTimer: number = 0;
@@ -419,6 +419,60 @@ export class BattleArenaStage {
       rig.state = { ...playerState };
       rig.targetPos.set(...playerState.position);
       rig.targetRot = playerState.rotation;
+    }
+  }
+
+  public hasPlayer(playerId: string): boolean {
+    return this.playerRigs.has(playerId);
+  }
+
+  public updatePlayerTransform(
+    playerId: string,
+    position: [number, number, number],
+    rotation: number,
+    action?: PlayerAction,
+    isBlocking?: boolean,
+    isPrimaryAttacker?: boolean
+  ) {
+    if (playerId === this.localPlayerId) return;
+    const rig = this.playerRigs.get(playerId);
+    if (rig) {
+      rig.targetPos.set(position[0], position[1], position[2]);
+      rig.targetRot = rotation;
+      if (action) rig.state.action = action;
+      if (typeof isBlocking === 'boolean') rig.state.isBlocking = isBlocking;
+      if (typeof isPrimaryAttacker === 'boolean') rig.state.isPrimaryAttacker = isPrimaryAttacker;
+    }
+  }
+
+  public handlePlayerDeath(playerId: string) {
+    const rig = this.playerRigs.get(playerId);
+    if (rig) {
+      rig.state.hp = 0;
+      rig.state.action = 'death';
+      this.createDustPuffVfx(rig.currentPos, 1.4);
+      soundManager.playHit(45, true);
+
+      // Radial death spark effect
+      const sparks = new THREE.Group();
+      for (let i = 0; i < 14; i++) {
+        const p = new THREE.Mesh(
+          new THREE.SphereGeometry(0.12, 6, 6),
+          new THREE.MeshBasicMaterial({ color: 0xef4444 })
+        );
+        p.position.copy(rig.currentPos);
+        p.position.y += 1.0;
+        p.position.x += (Math.random() - 0.5) * 1.4;
+        p.position.z += (Math.random() - 0.5) * 1.4;
+        sparks.add(p);
+      }
+      this.scene.add(sparks);
+      this.hitEffects.push({ mesh: sparks, lifetime: 0.5 });
+
+      // Cleanly remove after collapse
+      setTimeout(() => {
+        this.removePlayer(playerId);
+      }, 1200);
     }
   }
 
@@ -1148,6 +1202,18 @@ export class BattleArenaStage {
             p.lifetime = p.maxLifetime; // destroy projectile
           }
         });
+      } else {
+        // Remote projectile (e.g. from enemy bot) hitting local player
+        const localRig = this.playerRigs.get(this.localPlayerId);
+        if (localRig && localRig.state.hp > 0) {
+          if (localRig.currentPos.distanceTo(p.mesh.position) < 1.6) {
+            soundManager.playSpecialExplosion();
+            if (this.onHitTarget) {
+              this.onHitTarget(this.localPlayerId, p.damage, 'special', p.ownerId);
+            }
+            p.lifetime = p.maxLifetime;
+          }
+        }
       }
 
       // Check arena bounds or lifetime expiry

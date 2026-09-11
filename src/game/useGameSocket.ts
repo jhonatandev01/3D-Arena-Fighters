@@ -123,6 +123,24 @@ export function useGameSocket() {
               break;
 
             case 'player_death':
+              setCurrentRoom((prev) => {
+                if (!prev) return prev;
+                const players = { ...prev.players };
+                if (players[msg.victimId]) {
+                  players[msg.victimId] = {
+                    ...players[msg.victimId],
+                    hp: 0,
+                    action: 'death',
+                  };
+                }
+                const isBot = !!players[msg.victimId]?.isBot;
+                return {
+                  ...prev,
+                  players,
+                  phaseEnemiesAlive: isBot ? Math.max(0, (prev.phaseEnemiesAlive || 1) - 1) : prev.phaseEnemiesAlive,
+                  totalKills: isBot ? (prev.totalKills || 0) + 1 : prev.totalKills,
+                };
+              });
               if (callbacksRef.current.onPlayerDeath) {
                 callbacksRef.current.onPlayerDeath(msg);
               }
@@ -136,14 +154,32 @@ export function useGameSocket() {
               break;
 
             case 'phase_cleared':
-              setCurrentRoom((prev) => prev ? { ...prev, currentPhase: msg.phase, phaseBanner: msg.banner } : null);
+              setCurrentRoom((prev) => {
+                const base = msg.room || prev;
+                if (!base) return null;
+                return {
+                  ...base,
+                  currentPhase: msg.phase,
+                  phaseBanner: msg.banner,
+                };
+              });
               if (callbacksRef.current.onPhaseCleared) {
                 callbacksRef.current.onPhaseCleared(msg);
               }
               break;
 
             case 'phase_started':
-              setCurrentRoom((prev) => prev ? { ...prev, currentPhase: msg.phase, phaseEnemiesTotal: msg.enemyCount, phaseEnemiesAlive: msg.enemyCount, phaseBanner: msg.banner } : null);
+              setCurrentRoom((prev) => {
+                const base = msg.room || prev;
+                if (!base) return null;
+                return {
+                  ...base,
+                  currentPhase: msg.phase,
+                  phaseEnemiesTotal: msg.enemyCount,
+                  phaseEnemiesAlive: msg.enemyCount,
+                  phaseBanner: msg.banner,
+                };
+              });
               if (callbacksRef.current.onPhaseStarted) {
                 callbacksRef.current.onPhaseStarted(msg);
               }
@@ -303,8 +339,8 @@ export function useGameSocket() {
     send({ type: 'player_attack', attackType, origin, direction });
   }, [send]);
 
-  const sendHitAck = useCallback((targetId: string, damage: number, attackType: string) => {
-    send({ type: 'player_hit_ack', targetId, damage, attackType });
+  const sendHitAck = useCallback((targetId: string, damage: number, attackType: string, attackerId?: string) => {
+    send({ type: 'player_hit_ack', targetId, damage, attackType, attackerId });
   }, [send]);
 
   const sendChatMessage = useCallback((text: string) => {

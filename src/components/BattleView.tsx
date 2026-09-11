@@ -40,7 +40,7 @@ interface BattleViewProps {
   callbacksRef: React.MutableRefObject<any>;
   onSendPlayerInput: (pos: [number, number, number], rot: number, action: PlayerAction, isBlocking: boolean) => void;
   onSendPlayerAttack: (type: 'light' | 'special', origin: [number, number, number], dir: [number, number, number]) => void;
-  onSendHitAck: (targetId: string, damage: number, type: string) => void;
+  onSendHitAck: (targetId: string, damage: number, type: string, attackerId?: string) => void;
   onRematch: (extraStats?: any) => void;
   onExitToLobby: () => void;
 }
@@ -78,6 +78,8 @@ export const BattleView: React.FC<BattleViewProps> = ({
   } | null>(null);
 
   const hasRecordedOutcomeRef = useRef(false);
+  const roomRef = useRef(room);
+  roomRef.current = room;
 
   const localPlayer = room.players[localPlayerId];
   const playersList: PlayerState[] = Object.values(room.players);
@@ -147,21 +149,34 @@ export const BattleView: React.FC<BattleViewProps> = ({
       onSendPlayerAttack(type, origin, dir);
     };
 
-    stage.onHitTarget = (targetId, damage, type) => {
-      onSendHitAck(targetId, damage, type);
+    stage.onHitTarget = (targetId, damage, type, attackerId) => {
+      onSendHitAck(targetId, damage, type, attackerId);
     };
 
     // Hook network callbacks from socket to Three.js stage
     callbacksRef.current.onPlayerMoved = (data: any) => {
-      const existing = room.players[data.playerId];
-      if (existing) {
-        stage.syncPlayer({
-          ...existing,
-          position: data.position,
-          rotation: data.rotation,
-          action: data.action,
-          isBlocking: data.isBlocking,
-        });
+      if (!stageRef.current) return;
+      if (stageRef.current.hasPlayer(data.playerId)) {
+        stageRef.current.updatePlayerTransform(
+          data.playerId,
+          data.position,
+          data.rotation,
+          data.action,
+          data.isBlocking,
+          data.isPrimaryAttacker
+        );
+      } else {
+        // If not loaded yet, fetch from freshest roomRef
+        const existing = roomRef.current.players[data.playerId];
+        if (existing) {
+          stageRef.current.syncPlayer({
+            ...existing,
+            position: data.position,
+            rotation: data.rotation,
+            action: data.action,
+            isBlocking: data.isBlocking,
+          });
+        }
       }
     };
 
@@ -171,6 +186,12 @@ export const BattleView: React.FC<BattleViewProps> = ({
 
     callbacksRef.current.onCombatHit = (data: any) => {
       stage.applyDamageVisual(data.targetId, data.damage, data.isBlocked);
+    };
+
+    callbacksRef.current.onPlayerDeath = (data: any) => {
+      if (data.victimId !== localPlayerId && stageRef.current) {
+        stageRef.current.handlePlayerDeath(data.victimId);
+      }
     };
 
     callbacksRef.current.onPhaseCleared = (data: any) => {

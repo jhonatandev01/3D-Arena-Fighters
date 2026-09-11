@@ -705,14 +705,14 @@ wss.on('connection', (ws: WebSocket) => {
           const room = rooms.get(currentRoomId);
           if (!room || room.status !== 'battle') return;
 
-          const attacker = room.players.get(clientId);
+          const attacker = room.players.get(data.attackerId || clientId);
           const target = room.players.get(data.targetId);
 
           if (attacker && target && target.hp > 0) {
             // Debounce rapid duplicate hit registers from client ticks
             const now = Date.now();
             const lastHit = (target as any)._lastHitTimestamp || 0;
-            if (now - lastHit < 180) {
+            if (now - lastHit < 160) {
               return;
             }
             (target as any)._lastHitTimestamp = now;
@@ -733,7 +733,7 @@ wss.on('connection', (ws: WebSocket) => {
 
             broadcastToRoom(room, {
               type: 'combat_hit',
-              sourceId: clientId,
+              sourceId: attacker.id,
               targetId: target.id,
               damage,
               isBlocked,
@@ -757,6 +757,13 @@ wss.on('connection', (ws: WebSocket) => {
                   if (room.primaryAttackerId === target.id) {
                     room.primaryAttackerId = undefined;
                   }
+                  // Cleanly remove dead bot from room players after brief delay
+                  setTimeout(() => {
+                    const b = room.players.get(target.id);
+                    if (b && b.hp <= 0) {
+                      room.players.delete(target.id);
+                    }
+                  }, 1200);
                   // Swarm AI loop will detect when aliveBots.length === 0 and advance phase or victory
                 } else {
                   // Human was defeated in battle royale
@@ -1273,7 +1280,7 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
     });
 
     // Determine primary attacker:
-    // If current primary attacker died or is not set, select the closest alive bot
+    // If current primary attacker died, is missing, or cycle timer expired, select the closest alive bot
     let currentPrimary = room.primaryAttackerId ? aliveBots.find((b) => b.id === room.primaryAttackerId) : null;
     if (!currentPrimary && botDists.length > 0) {
       const closest = botDists.reduce((min, cur) => (cur.dist < min.dist ? cur : min), botDists[0]);
@@ -1290,19 +1297,40 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
 
       if (isPrimary) {
         // PRIMARY ATTACKER:
-        // Full, aggressive pursuit speed
+        // Full, aggressive pursuit speed towards player
         const speedStep = 0.42;
         let action = 'idle';
 
-        if (dist > 2.4) {
+        if (dist > 2.2) {
+          // Approach human
           bot.position[0] += (dx / dist) * speedStep;
           bot.position[2] += (dz / dist) * speedStep;
           action = 'walk';
+
+          // If at medium-far distance and ready, bot can launch a special projectile!
+          if (dist >= 5.0 && dist <= 12.0 && (bot.attackCooldownTicks || 0) <= 0 && Math.random() < 0.28) {
+            action = 'special';
+            bot.attackCooldownTicks = 32; // 3.2s cooldown
+            const attackOrigin: [number, number, number] = [
+              bot.position[0] + (dx / dist) * 1.1,
+              1.1,
+              bot.position[2] + (dz / dist) * 1.1,
+            ];
+            const attackDir: [number, number, number] = [dx / dist, 0, dz / dist];
+
+            broadcastToRoom(room, {
+              type: 'remote_attack',
+              sourceId: bot.id,
+              attackType: 'special',
+              origin: attackOrigin,
+              direction: attackDir,
+            });
+          }
         } else {
-          // In combat range
+          // In close melee combat range (dist <= 2.2)
           if ((bot.attackCooldownTicks || 0) <= 0) {
             action = 'attack';
-            bot.attackCooldownTicks = 15; // ~1.5s cooldown
+            bot.attackCooldownTicks = 16; // ~1.6s cooldown
             const attackOrigin: [number, number, number] = [
               bot.position[0] + (dx / dist) * 1.1,
               1.1,
@@ -1318,17 +1346,23 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
               direction: attackDir,
             });
 
-            // Strike with delay so human can block or dash
+            // Strike with delay so human can block, counter, or dash away
             setTimeout(() => {
               if (room.status !== 'battle') return;
               const curHuman = room.players.get(humanId);
-              if (curHuman && curHuman.hp > 0 && bot.hp > 0) {
+              const curBot = room.players.get(bot.id);
+
+              // STRICT VALIDATION:
+              // Bot MUST be alive, human MUST be alive, and bot MUST still be in close melee range (<= 2.4 units)!
+              if (curHuman && curHuman.hp > 0 && curBot && curBot.hp > 0) {
                 const curDist = Math.hypot(
-                  curHuman.position[0] - bot.position[0],
-                  curHuman.position[2] - bot.position[2]
+                  curHuman.position[0] - curBot.position[0],
+                  curHuman.position[2] - curBot.position[2]
                 );
-                if (curDist < 3.2) {
-                  let dmg = 18 + (bot.level || 1) * 3;
+
+                // If player dashed away or bot moved away, attack misses cleanly
+                if (curDist <= 2.4) {
+                  let dmg = 18 + (curBot.level || 1) * 3;
                   if (curHuman.isBlocking) {
                     const ratio = curHuman.blockDamageRatio !== undefined ? curHuman.blockDamageRatio : 0.25;
                     dmg = Math.max(1, Math.round(dmg * ratio));
@@ -1336,27 +1370,27 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
                   curHuman.hp = Math.max(0, curHuman.hp - dmg);
                   broadcastToRoom(room, {
                     type: 'combat_hit',
-                    sourceId: bot.id,
+                    sourceId: curBot.id,
                     targetId: curHuman.id,
                     damage: dmg,
                     isBlocked: curHuman.isBlocking,
                     targetHp: curHuman.hp,
-                    attackerEnergy: bot.energy,
+                    attackerEnergy: curBot.energy,
                   });
 
                   if (curHuman.hp <= 0) {
                     broadcastToRoom(room, {
                       type: 'player_death',
                       victimId: curHuman.id,
-                      killerId: bot.id,
+                      killerId: curBot.id,
                     });
                     setTimeout(() => {
                       room.status = 'ended';
-                      room.winnerId = bot.id;
+                      room.winnerId = curBot.id;
                       broadcastToRoom(room, {
                         type: 'game_over',
-                        winnerId: bot.id,
-                        winnerName: bot.name,
+                        winnerId: curBot.id,
+                        winnerName: curBot.name,
                         room: serializeRoom(room),
                         isBattleRoyaleWin: false,
                         totalKills: room.totalKills || 0,
@@ -1366,14 +1400,14 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
                   }
                 }
               }
-            }, 320);
+            }, 280);
 
-            // Yield primary attacker spot after attacking so another bot steps in!
+            // Yield primary attacker spot so another bot steps up
             setTimeout(() => {
               if (room.primaryAttackerId === bot.id) {
                 room.primaryAttackerId = undefined;
               }
-            }, 900);
+            }, 1100);
           } else {
             action = 'idle';
           }
@@ -1382,14 +1416,14 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
       } else {
         // FLANKERS / SURROUNDING BOTS:
         // "só que enquanto um ataca, os outros ficam mais lento, atacam também, só que mais lento"
-        // Slower movement speed (0.16 step - more than 60% slower!)
-        const slowSpeedStep = 0.16;
+        // Move towards the human at slower speed (~0.18 step)
+        const slowSpeedStep = 0.18;
         let action = 'idle';
 
-        // Calculate encircling orbital position around the human
-        const flankOffsetAngle = (idx % 2 === 0 ? 1 : -1) * (0.8 + idx * 0.35);
+        // Calculate encircling orbital position close to human (~2.3 radius)
+        const flankOffsetAngle = (idx % 2 === 0 ? 1 : -1) * (0.75 + idx * 0.3);
         const orbitAngle = directAngle + flankOffsetAngle;
-        const targetRadius = 3.6 + (idx % 3) * 0.6;
+        const targetRadius = 2.3;
         const targetX = human.position[0] - Math.sin(orbitAngle) * targetRadius;
         const targetZ = human.position[2] - Math.cos(orbitAngle) * targetRadius;
 
@@ -1405,10 +1439,28 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
           action = 'idle';
         }
 
-        // Attacks too, but with much slower cooldown (42-55 ticks ~ 4.2-5.5s)
-        if (dist < 3.0 && (bot.attackCooldownTicks || 0) <= 0) {
+        // Flanker can fire a telegraphed special projectile from distance
+        if (dist >= 5.0 && dist <= 12.0 && (bot.attackCooldownTicks || 0) <= 0 && Math.random() < 0.2) {
+          action = 'special';
+          bot.attackCooldownTicks = 55 + idx * 6; // Slower cooldown ~5.5s
+          const attackOrigin: [number, number, number] = [
+            bot.position[0] + (dx / dist) * 1.1,
+            1.1,
+            bot.position[2] + (dz / dist) * 1.1,
+          ];
+          const attackDir: [number, number, number] = [dx / dist, 0, dz / dist];
+
+          broadcastToRoom(room, {
+            type: 'remote_attack',
+            sourceId: bot.id,
+            attackType: 'special',
+            origin: attackOrigin,
+            direction: attackDir,
+          });
+        } else if (dist <= 2.2 && (bot.attackCooldownTicks || 0) <= 0) {
+          // Melee attack only if in close melee range (dist <= 2.2)
           action = 'attack';
-          bot.attackCooldownTicks = 42 + idx * 5; // Much slower cadence
+          bot.attackCooldownTicks = 45 + idx * 6; // Much slower melee attack cadence (~4.5s)
           const attackOrigin: [number, number, number] = [
             bot.position[0] + (dx / dist) * 1.1,
             1.1,
@@ -1424,17 +1476,23 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
             direction: attackDir,
           });
 
-          // Inflict slower telegraphed hit
+          // Inflict slower telegraphed hit with strict validation
           setTimeout(() => {
             if (room.status !== 'battle') return;
             const curHuman = room.players.get(humanId);
-            if (curHuman && curHuman.hp > 0 && bot.hp > 0) {
+            const curBot = room.players.get(bot.id);
+
+            // STRICT VALIDATION:
+            // Bot MUST be alive, human MUST be alive, and bot MUST still be in close melee range (<= 2.4 units)!
+            if (curHuman && curHuman.hp > 0 && curBot && curBot.hp > 0) {
               const curDist = Math.hypot(
-                curHuman.position[0] - bot.position[0],
-                curHuman.position[2] - bot.position[2]
+                curHuman.position[0] - curBot.position[0],
+                curHuman.position[2] - curBot.position[2]
               );
-              if (curDist < 3.2) {
-                let dmg = 12 + (bot.level || 1) * 2;
+
+              // If player moved away or bot died, NO DAMAGE
+              if (curDist <= 2.4) {
+                let dmg = 12 + (curBot.level || 1) * 2;
                 if (curHuman.isBlocking) {
                   const ratio = curHuman.blockDamageRatio !== undefined ? curHuman.blockDamageRatio : 0.25;
                   dmg = Math.max(1, Math.round(dmg * ratio));
@@ -1442,27 +1500,27 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
                 curHuman.hp = Math.max(0, curHuman.hp - dmg);
                 broadcastToRoom(room, {
                   type: 'combat_hit',
-                  sourceId: bot.id,
+                  sourceId: curBot.id,
                   targetId: curHuman.id,
                   damage: dmg,
                   isBlocked: curHuman.isBlocking,
                   targetHp: curHuman.hp,
-                  attackerEnergy: bot.energy,
+                  attackerEnergy: curBot.energy,
                 });
 
                 if (curHuman.hp <= 0) {
                   broadcastToRoom(room, {
                     type: 'player_death',
                     victimId: curHuman.id,
-                    killerId: bot.id,
+                    killerId: curBot.id,
                   });
                   setTimeout(() => {
                     room.status = 'ended';
-                    room.winnerId = bot.id;
+                    room.winnerId = curBot.id;
                     broadcastToRoom(room, {
                       type: 'game_over',
-                      winnerId: bot.id,
-                      winnerName: bot.name,
+                      winnerId: curBot.id,
+                      winnerName: curBot.name,
                       room: serializeRoom(room),
                       isBattleRoyaleWin: false,
                       totalKills: room.totalKills || 0,
@@ -1472,7 +1530,7 @@ function setupBattleRoyaleSwarmAI(room: Room, humanId: string) {
                 }
               }
             }
-          }, 450);
+          }, 380);
         }
 
         bot.action = action;
